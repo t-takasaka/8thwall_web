@@ -1,4 +1,4 @@
-# 8th Wall Web Examples - three.js - VRM - Tap to place
+# 8th Wall Web Examples - three.js - VRM
 
 8th Wall Web と three.js で VRM モデルを表示するサンプルです。
 
@@ -6,7 +6,7 @@
 
 マーカーレスなのでモデルの接地面を変更することができ、例えば「モデルを手に乗せる」というような使い方が可能です。
 
-詳しくは公式サイトを確認してください。
+ページの一般公開はProプランの契約が必要です。詳しくは公式サイトを確認してください。
 
 - 8th Wall
 
