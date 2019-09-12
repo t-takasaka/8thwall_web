@@ -21,9 +21,27 @@ function create() {
   let camPermissionsFailedAndroid_
   let camPermissionsFailedApple_
   let camPermissionsFailedSamsung_
+  let deviceMotionErrorApple_
   let appLoaded_ = () => { return true }
   let numUpdates_ = 0
   let waitingOnReality_ = false
+  let needsPermissionCookie_ = false
+  const ua = navigator.userAgent
+
+  let hasMotionEvents_ = false
+  const motionListener = () => {
+    hasMotionEvents_ = true
+    window.removeEventListener('devicemotion', motionListener)
+  }
+  window.addEventListener('devicemotion', motionListener)
+
+  const iframeMotionListener = (event) => {
+    if (event.data.deviceOrientation8w || event.data.deviceMotion8w) {
+      hasMotionEvents_ = true
+      window.removeEventListener('message', iframeMotionListener)
+    }
+  }
+  window.addEventListener('message', iframeMotionListener)
 
   const setRoot = rootNode => {
     rootNode_ = rootNode
@@ -33,24 +51,27 @@ function create() {
     camPermissionsFailedAndroid_ = document.getElementById("cameraPermissionsErrorAndroid")
     camPermissionsFailedApple_ = document.getElementById("cameraPermissionsErrorApple")
     camPermissionsFailedSamsung_ = document.getElementById("cameraPermissionsErrorSamsung")
+    deviceMotionErrorApple_ = document.getElementById("deviceMotionErrorApple")
+    userPromptError_ = document.getElementById("userPromptError")
+    cameraSelectionWorldTrackingError_ = document.getElementById("cameraSelectionWorldTrackingError")
+    motionPermissionsErrorApple_ = document.getElementById("motionPermissionsErrorApple")
   }
 
-  const hideLoadingScreenNow = () => {
+  const hideLoadingScreenNow = (removeRoot = true) => {
     loadBackground_.classList.add('hidden')
-    rootNode_.parentNode && rootNode_.parentNode.removeChild(rootNode_)
+    removeRoot && rootNode_.parentNode && rootNode_.parentNode.removeChild(rootNode_)
   }
 
-  const hideLoadingScreen = () => {
+  const hideLoadingScreen = (removeRoot = true) => {
     loadImageContainer_.classList.add('fade-out')
     setTimeout(() => {
       loadBackground_.classList.add('fade-out')
       loadBackground_.style.pointerEvents = 'none'
-      setTimeout(() => hideLoadingScreenNow(), 1000)
-    }, 1000)
+      setTimeout(() => hideLoadingScreenNow(removeRoot), 400)
+    }, 400)
   }
 
   const showCameraPermissionsPrompt = () => {
-    showLoading()
     camPermissionsRequest_.classList.remove('hidden')
   }
 
@@ -60,7 +81,6 @@ function create() {
 
   const promptUserToChangeBrowserSettings = () => {
     camPermissionsRequest_.classList.add('hidden')
-    const ua = navigator.userAgent
     if (ua.includes('Linux')) {
       let instructionsToShow
 
@@ -81,22 +101,63 @@ function create() {
     } else {
       camPermissionsFailedApple_.classList.remove('hidden')
     }
+    hideLoadingScreen(false)
 
+    XR.pause()
+    XR.stop()
+  }
+
+  const promptUserToChangeBrowserMotionSettings = () => {
+    window.removeEventListener('devicemotion', motionListener)
+    window.removeEventListener('message', iframeMotionListener)
+
+    // Device orientation permissions only need to be requested on iOS.
+    if (XR.XrDevice.deviceEstimate().os !== 'iOS') {
+      return
+    }
+
+    // Device orientation permissions only need to be requested if they're required.
+    if (XR.XrPermissions) {
+      const permissions = XR.XrPermissions.permissions()
+      const requiredPermissions = XR.requiredPermissions()
+      if (!requiredPermissions.has(permissions.DEVICE_MOTION)
+        && !requiredPermissions.has(permissions.DEVICE_ORIENTATION)) {
+        return
+      }
+    }
+
+    if (XR.XrDevice.deviceEstimate().osVersion.startsWith('12')) {
+      deviceMotionErrorApple_.classList.remove('hidden')
+    } else {
+      motionPermissionsErrorApple_.classList.remove('hidden')
+    }
+
+    hideLoadingScreen(false)
     XR.pause()
     XR.stop()
   }
 
   const checkLoaded = () => {
     if (appLoaded_() && !waitingOnReality_) {
+      if (needsPermissionCookie_) {
+        document.cookie = 'previouslyGotCameraPermission=true;max-age=31536000';
+      }
       hideLoadingScreen()
       return
     }
     requestAnimationFrame(() => { checkLoaded() })
   }
-
+  const isAndroid = ua.includes('Linux')
+  needsPermissionCookie_ = isAndroid && !document.cookie.includes('previouslyGotCameraPermission=true')
+  const previouslyGotCameraPermission = isAndroid && !needsPermissionCookie_
   const pipelineModule = () => {
     return {
       name: 'loading',
+      onStart: () => {
+        if (hasMotionEvents_ !== true) {
+          promptUserToChangeBrowserMotionSettings()
+        }
+      },
       onUpdate: () => {
         if (!waitingOnReality_) {
           return
@@ -108,24 +169,64 @@ function create() {
           checkLoaded()
         }
       },
+      onBeforeRun: () => {
+        showLoading()
+      },
       onCameraStatusChange: ({status}) => {
         if (!XR.XrDevice.isDeviceBrowserCompatible()) {
           return
         }
         if (status == 'requesting') {
-          showCameraPermissionsPrompt()
+          showLoading()
+          if (!previouslyGotCameraPermission) {
+            showCameraPermissionsPrompt()
+          }
         } else if (status == 'hasStream') {
-          dismissCameraPermissionsPrompt()
+          if (!previouslyGotCameraPermission) {
+            dismissCameraPermissionsPrompt()
+          }
         } else if (status == 'hasVideo') {
-          // ignore; wait a few frames for UI to update before dropping load screen.
+          // wait a few frames for UI to update before dropping load screen.
         } else if (status == 'failed') {
           promptUserToChangeBrowserSettings()
         }
       },
-      onException: () => {
+      onException: error => {
         if (!rootNode_) {
           return
         }
+
+        if (error instanceof Object) {
+          if (error.type === 'permission') {
+            if (error.permission === 'prompt') {
+              // User denied XR8's prompt to start requesting
+              hideLoadingScreen(false)
+              userPromptError_.classList.remove('hidden')
+              return
+            }
+
+            if (error.permission === XR8.XrPermissions.permissions().DEVICE_MOTION ||
+                error.permission === XR8.XrPermissions.permissions().DEVICE_ORIENTATION) {
+              // This only happens if motion or orientation are requestable permissions (iOS 13+)
+              promptUserToChangeBrowserMotionSettings()
+              return
+            }
+          }
+          if (error.type === 'configuration') {
+            if (error.source === 'reality' && error.err === 'slam-front-camera-unsupported') {
+              // User is attemping to use Front camera without disabling world tracking
+              hideLoadingScreen(false)
+              document.getElementById('camera_mode_world_tracking_error').innerHTML = error.message
+              cameraSelectionWorldTrackingError_.classList.remove('hidden')
+
+              // Stop camera processing.
+              XR.pause()
+              XR.stop()
+              return
+            }
+          }
+        }
+
         dismissCameraPermissionsPrompt()
         hideLoadingScreenNow()
       },

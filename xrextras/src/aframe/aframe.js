@@ -1,3 +1,5 @@
+const {xrComponents} = require('./xr-components.js')
+
 let xrextrasAframe = null
 
 const AFrameFactory = () => {
@@ -8,9 +10,64 @@ const AFrameFactory = () => {
   return xrextrasAframe
 }
 
+const onxrloaded = () => { XR.addCameraPipelineModule(XRExtras.Loading.pipelineModule()) }
+
 function create() {
   let registered = false
 
+  // NOTE: new versions of 8frame should be added in descending order, so that the latest version
+  // is always in position 1.
+  const allowed8FrameVersions = ['latest', '0.9.0', '0.8.2']
+  const LATEST_8FRAME = allowed8FrameVersions[1]  // The 'latest' version of 8frame.
+
+  // Check that the requested version of AFrame has a corresponding 8Frame implementation.
+  const checkAllowed8FrameVersions = (version) => new Promise((resolve, reject) =>
+    allowed8FrameVersions.includes(version)
+      ? resolve(version === 'latest' ? LATEST_8FRAME : version)
+      : reject(`${version} is an unsupported AFrame version: (${JSON.stringify(allowedVersions)})`))
+
+  // Load an external javascript resource in a promise that resolves when the javascript has loaded.
+  const loadJsPromise = url => new Promise((resolve, reject) =>
+    document.head.appendChild(Object.assign(
+      document.createElement('script'), {async: true, onload: resolve, onError: reject, src: url})))
+
+  // Get a promise that resolves when an event with the given name has been dispacted to the window.
+  const waitEventPromise = eventname =>
+    new Promise((resolve) => window.addEventListener(eventname, resolve, {once: true}))
+
+  // If XR or XRExtras load before AFrame, we need to manually register their AFrame components.
+  const ensureAFrameComponents = () => {
+    window.XR       && window.AFRAME.registerComponent('xrweb', XR.AFrame.xrwebComponent())
+    window.XRExtras && window.XRExtras.AFrame.registerXrExtrasComponents()
+  }
+
+  // If XR and XRExtras aren't loaded, wait for them.
+  const ensureXrAndExtras = () => {
+    const eventnames = []
+    window.XR       || eventnames.push('xrloaded')
+    window.XRExtras || eventnames.push('xrextrasloaded')
+    return Promise.all(eventnames.map(waitEventPromise))
+  }
+
+  // Register a map of component-name -> component, e.g.
+  // {
+  //   'component-1': component1,
+  //   'component-2': component2,
+  // }
+  const registerComponents = (components) =>
+    Object.keys(components).map(k => AFRAME.registerComponent(k, components[k]))
+
+  // Load the 8th Wall preferred version of AFrame at runtime ensuring that xr components are added.
+  const loadAFrameForXr = (args) => {
+    const {version = 'latest', components = {}} = args || {}
+    return checkAllowed8FrameVersions(version)
+      .then(ver => loadJsPromise(`//cdn.8thwall.com/web/aframe/8frame-${ver}.min.js`))
+      .then(ensureAFrameComponents)
+      .then(ensureXrAndExtras)
+      .then(_ => registerComponents(components))
+  }
+
+  // Register XRExtras AFrame components.
   const registerXrExtrasComponents = () => {
     // If AFrame is not ready, or we already registered components, skip.
     if (registered || !window.AFRAME) {
@@ -20,52 +77,17 @@ function create() {
     // Only register the components once.
     registered = true
 
-    // Display 'almost there' flows.
-    AFRAME.registerComponent('xrextras-almost-there', {
-      init: function() {
-        const load = () => { XR.addCameraPipelineModule(XRExtras.AlmostThere.pipelineModule()) }
-        window.XRExtras && window.XR ? load() : window.addEventListener('xrandextrasloaded', load)
-      }
-    })
-
-    // Display loading screen.
-    AFRAME.registerComponent('xrextras-loading', {
-      init: function() {
-        let aframeLoaded = false
-        this.el.addEventListener('loaded', () => {aframeLoaded = true})
-        const aframeDidLoad = () => { return aframeLoaded }
-        const onxrloaded = () => { XR.addCameraPipelineModule(XRExtras.Loading.pipelineModule()) }
-        const load = () => {
-          XRExtras.Loading.setAppLoadedProvider(aframeDidLoad)
-          XRExtras.Loading.showLoading({onxrloaded})
-        }
-        window.XRExtras ? load() : window.addEventListener('xrextrasloaded', load)
-      }
-    })
-
-    // Show an error-handling scene on error.
-    AFRAME.registerComponent('xrextras-runtime-error', {
-      init: function() {
-        const load = () => { XR.addCameraPipelineModule(XRExtras.RuntimeError.pipelineModule()) }
-        window.XRExtras && window.XR ? load() : window.addEventListener('xrandextrasloaded', load)
-      }
-    })
-
-    // Recenter the scene when the screen is tapped.
-    AFRAME.registerComponent('xrextras-tap-recenter', {
-      init: function() {
-        const scene = this.el.sceneEl
-        scene.addEventListener('click', () => { scene.emit('recenter', {}) })
-      }
-    })
+    registerComponents(xrComponents())
   }
 
   // Eagerly try to register the aframe components, if aframe has already loaded.
   registerXrExtrasComponents()
 
   return {
+    // Load the 8th Wall version of AFrame at runtime ensuring that xr components are added.
+    loadAFrameForXr,
     // Register the XRExtras components. This should only be called after AFrame has loaded.
-    registerXrExtrasComponents
+    registerXrExtrasComponents,
   }
 }
 
@@ -86,13 +108,15 @@ const eagerload = () => {
   Object.keys(attrs).forEach(a => {
     const attr = attrs.item(a).name
     if (attr == 'xrextras-almost-there') {
+      const redirectMatch = new RegExp('url:([^;]*)').exec(attrs.item(a).value)
+      redirectMatch && window.XRExtras.AlmostThere.configure({url: redirectMatch[1]})
       window.XR
         ? window.XRExtras.AlmostThere.checkCompatibility()
         : window.addEventListener('xrloaded', window.XRExtras.AlmostThere.checkCompatibility)
     }
 
     if (attr == 'xrextras-loading') {
-      window.XRExtras.Loading.showLoading()
+      window.XRExtras.Loading.showLoading({onxrloaded})
     }
   })
 }
@@ -102,7 +126,7 @@ const aframeonload = () => {
   if (oldonload) {
     oldonload()
   }
-  window.XRExtras ? eagerload() : window.addEventListener('xrextrasloaded', eagerload)
+  window.XRExtras ? eagerload() : window.addEventListener('xrextrasloaded', eagerload, {once: true})
 }
 window.onload = aframeonload
 

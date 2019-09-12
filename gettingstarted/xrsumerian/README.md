@@ -1,6 +1,6 @@
 # Amazon Sumerian with 8th Wall Web
 ### tl;dr
-While Amazon Sumerian provides you with the tools to create immersive 3D experiences, it does not provide creative control over the web page that is hosting these experiences. In order do something like, say, customize your loading screen, you’re required to use Sumerian with Amazon Amplify. Amazon Amplify is a tool that allows developers to create web apps and provides APIs to several AWS Services (like Sumerian!).
+While Amazon Sumerian provides you with the tools to create immersive 3D experiences, it does not provide creative control over the web page that is hosting these experiences. In order do something like, say, customize your loading screen, you’re required to use Sumerian with AWS Amplify. AWS Amplify is a tool that allows developers to create web apps and provides APIs to several AWS Services (like Sumerian!).
 
 With that said, we’ve made it as simple as adding a few lines of JavaScript to your Amplify app to AR-ify your Sumerian scene.
 
@@ -35,7 +35,7 @@ async function loadAndStartScene() {
 ```
 
 ## Setting up Development Environment
-Sign up for an Amazon [AWS Account](https://portal.aws.amazon.com/billing/signup?redirect_url=https%3A%2F%2Faws.amazon.com%2Fregistration-confirmation#/start). Both Amazon Amplify and Sumerian require this.
+Sign up for an Amazon [AWS Account](https://portal.aws.amazon.com/billing/signup?redirect_url=https%3A%2F%2Faws.amazon.com%2Fregistration-confirmation#/start). Both AWS Amplify and Sumerian require this.
 
 Install [Node.js](https://nodejs.org/en/download/) and [npm](https://www.npmjs.com/get-npm).
 Make sure you are running Node.js version 8.11+ or greater, and npm version 5.x or greater. This can be checked by running the following in your termnial:
@@ -117,13 +117,17 @@ https://{aws_project_region}.console.aws.amazon.com/cognito/pool/?region={aws_pr
 3) Click Edit Identity pool.
 4) Expand Unauthenticated Identities and ensure the checkbox is enabled.
 5) Ensure that the Unauthenticated role and the Authenticated role matches the names of the UnauthRoleName and AuthRoleName in your `.amplifyrc` file.
-6) Copy the identity pool id to a place where you can access later. We will set this in the Sumerian scene.
+6) Copy the identity pool id.
+7) Navigate to your Sumerian scene editor.
+8) Click on the root element in your scene on the left sidebar (it should be the name of your scene).
+9) On the right sidebar, click `AWS Configuration`.
+10) Paste the identity pool id you copied earlier into the `Congnito Identity Pool ID` section.
 
 ### Adding Permissions to an Identity Pool Role
 Navigate to the [Roles page](https://console.aws.amazon.com/iam/home#/roles) in the AWS IAM console. Locate the Roles that have been created for your project. They should look something like
 ```
-	{project-name}-{time-created}-authRole
-	{project-name}-{time-created}-unauthRole
+  {project-name}-{time-created}-authRole
+  {project-name}-{time-created}-unauthRole
 ```
 
 For both of these, do the following:
@@ -146,11 +150,15 @@ For both of these, do the following:
 
 ## Testing your App
 From the `xrsumerian` directory, run the following command:
+### MacOS
 ```
 $ npm start
 ```
+### Windows
+```
+$ npm run start-windows
+```
 
-You should now see your application hosted on `https://{local_ip}:8080`
-
-From your Android or iOS device, ensure you are on the same network as your computer, then navigate to the
-provided IP address.
+You should now see your application hosted on `https://{local_ip}:8080`.
+Scanning theh QR code on the console from your mobile device will take you to this address.
+Both the mobile device and the computer serving thhe demo application must be on the same network.

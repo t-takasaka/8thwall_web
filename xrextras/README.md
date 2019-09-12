@@ -13,13 +13,6 @@ $ npm install
 $ npm run build
 ```
 
-## Currnet Version
-
-The current version of xrextras is 0.0.1, and it can be specifically referenced using
-[//cdn.8thwall.com/web/xrextras/xrextras-0.0.1.js](https://cdn.8thwall.com/web/xrextras/xrextras-0.0.1.js)
-
-This version requires 8th Wall XR Version 9.4.1 or newer.
-
 ## Hello World
 
 ### Native JS
@@ -33,11 +26,11 @@ index.html:
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 
     <!-- XR Extras - provides utilities like load screen, almost there, and error handling.
-         See github.com/8thwall/web/xrextras -->
+         See https://github.com/8thwall/web/tree/master/xrextras/ -->
     <script src="//cdn.8thwall.com/web/xrextras/xrextras.js"></script>
 
     <!-- 8thWall Web - Replace the app key here with your own app key -->
-    <script async src="https://apps.8thwall.com/xrweb?appKey=XXXXXXXXXXXXXXXXX"></script>
+    <script async src="//apps.8thwall.com/xrweb?appKey=XXXXXXXX"></script>
 
     <script src="index.js"></script>
   </head>
@@ -81,11 +74,11 @@ index.html:
     <script src="//cdn.8thwall.com/web/aframe/8frame-0.8.2.min.js"></script>
 
     <!-- XR Extras - provides utilities like load screen, almost there, and error handling.
-         See github.com/8thwall/web/xrextras -->
+         See https://github.com/8thwall/web/tree/master/xrextras/ -->
     <script src="//cdn.8thwall.com/web/xrextras/xrextras.js"></script>
 
     <!-- 8thWall Web - Replace the app key here with your own app key -->
-    <script async src="https://apps.8thwall.com/xrweb?appKey=XXXXXXXXXXXXXXXXX"></script>
+    <script async src="//apps.8thwall.com/xrweb?appKey=XXXXXXXX"></script>
   </head>
 
   <body>

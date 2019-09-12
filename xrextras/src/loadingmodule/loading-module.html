@@ -24,43 +24,72 @@
     <div id="cameraPermissionsCameraIcon">
       <img src="//cdn.8thwall.com/web/img/loading/v1/camera-purple.png" />
     </div>
-    <div id="cameraPermissionsDeniedHeader">Let's enable your camera</div>
-    <div id="cameraPermissionsDeniedInstructions">
-      <ol id="cameraPermissionsDeniedInstructionsList">
-        <li>Tap the <img src="//cdn.8thwall.com/web/img/loading/v1/ellipsis.png"> in the top right</li>
-        <li>Tap <span class="highlight">Settings</li>
-        <li class="chrome-instruction hidden">
-          <span class="highlight">Site settings</span>
-        </li>
-        <li class="chrome-instruction hidden">
-          <span class="highlight">Camera</span>
-        </li>
-        <li class="chrome-instruction hidden">
-          <span class="highlight">Blocked</span>
-          <br>
-          <span class="camera-instruction-block domain-view">apps.8thwall.com</span>
-        </li>
-        <li class="chrome-instruction hidden">
-          <span class="camera-instruction-button">CLEAR & RESET</span>
-        </li>
-        <li class="samsung-instruction hidden">
-          <span class="highlight">Advanced</span>
-        </li>
-        <li class="samsung-instruction hidden">
-          <span class="highlight">Manage website data</span>
-        </li>
-        <li class="samsung-instruction hidden">
-          Press and hold<br>
-          <span class="camera-instruction-block domain-view">apps.8thwall.com</span>
-        </li>
-        <li class="samsung-instruction hidden">
-          <span class="highlight" style="color: #1500ba">DELETE</span>
-        </li>
-      </ol>
-    </div>
-    <div id="cameraPermissionsDeniedFooter">
+    <div class="loading-error-header">Let's enable your camera</div>
+    <ol class="loading-error-instructions">
+      <li>Tap the <img src="//cdn.8thwall.com/web/img/loading/v1/ellipsis.png"> in the top right</li>
+      <li>Tap <span class="highlight">Settings</li>
+      <li class="chrome-instruction hidden">
+        <span class="highlight">Site settings</span>
+      </li>
+      <li class="chrome-instruction hidden">
+        <span class="highlight">Camera</span>
+      </li>
+      <li class="chrome-instruction hidden">
+        <span class="highlight">Blocked</span>
+        <br>
+        <span class="camera-instruction-block domain-view">apps.8thwall.com</span>
+      </li>
+      <li class="chrome-instruction hidden">
+        <span class="camera-instruction-button">CLEAR & RESET</span>
+      </li>
+      <li class="samsung-instruction hidden">
+        <span class="highlight">Advanced</span>
+      </li>
+      <li class="samsung-instruction hidden">
+        <span class="highlight">Manage website data</span>
+      </li>
+      <li class="samsung-instruction hidden">
+        Press and hold<br>
+        <span class="camera-instruction-block domain-view">apps.8thwall.com</span>
+      </li>
+      <li class="samsung-instruction hidden">
+        <span class="highlight" style="color: #1500ba">DELETE</span>
+      </li>
+    </ol>
+    <div class="loading-error-footer">
       <img src="//cdn.8thwall.com/web/img/loading/v1/reload.png" />
       Then, reload the page to experience some AR magic!
     </div>
+  </div>
+
+    <!--iOS devicemotion sensor is disabled -->
+  <div id="deviceMotionErrorApple" class="absolute-fill hidden">
+    <div class="loading-error-header">Let's enable your motion sensors</div>
+    <ol class="loading-error-instructions">
+      <li>Open <img src="https://cdn.8thwall.com/web/img/loading/v1/settings-icon-ios.png" style="max-height: 4vh"><b>Settings</b></li>
+      <li>Select <img src="https://cdn.8thwall.com/web/img/loading/v1/safari-icon.png" style="max-height: 4vh"><b>Safari</b></li>
+      <li>Enable <span class="highlight">Motion&nbsp;&amp;&nbsp;Orientation Access</span></li>
+      <li>Reload the page <img src="//cdn.8thwall.com/web/img/loading/v1/reload.png"></li>
+    </ol>
+    <!-- Empty footer to take up space -->
+    <div class="loading-error-footer"></div>
+  </div>
+
+  <div id="userPromptError" class="permission-error absolute-fill hidden">
+    <h1>Permissions were denied.</h1>
+    <p>You need to accept permissions to continue.</p>
+    <button id="reloadButton" class="main-button" onClick="window.location.reload()">Refresh</button>
+  </div>
+
+  <div id="motionPermissionsErrorApple" class="permission-error absolute-fill hidden">
+    <h1>Permissions were denied.</h1>
+    <p>You've prevented the page from accessing your motion sensors.</p>
+    <p>Please close out of Safari to reenable your motion sensors.</p>
+  </div>
+
+  <div id="cameraSelectionWorldTrackingError" class="permission-error absolute-fill hidden">
+    <p><img height="75px" src="//cdn.8thwall.com/web/img/runtimeerror/v1/computer-voxel.png" class="floater"></p>
+    <div class="error-text-header">Oops, something went wrong!</div>
+    <p id="camera_mode_world_tracking_error"></p>
   </div>
 </div>
