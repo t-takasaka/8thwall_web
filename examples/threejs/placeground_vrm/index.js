@@ -15,7 +15,6 @@ const placegroundScenePipelineModule = () => {
 
   const raycaster = new THREE.Raycaster()
   const tapPosition = new THREE.Vector2()
-  const loader = new THREE.GLTFLoader()  // This comes from GLTFLoader.js.
   const loader = new THREE.VRMLoader()
   const animationLoader = new THREE.GLTFLoader();
 
