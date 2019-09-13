@@ -3,29 +3,24 @@
 // Returns a pipeline module that initializes the threejs scene when the camera feed starts, and
 // handles subsequent spawning of a glb model whenever the scene is tapped.
 const placegroundScenePipelineModule = () => {
-  // 3D model to spawn at tap
-  const modelFiles = [ 'assets/SendagayaShibu.vrm', 'assets/SendagayaShino.vrm' ];
+  const modelFiles = [ 'assets/three-vrm-girl.vrm' ];          // 3D model to spawn at tap
   // 別のgltfからモーションを借用
   // http://examples.claygl.xyz/examples/basicModelAnimation.html
   const animationFiles = [ 'assets/SambaDancing.gltf' ];
 
   const startScale = new THREE.Vector3(0.0001, 0.0001, 0.0001) // Initial scale value for our model
-  const endScale = new THREE.Vector3(0.002, 0.002, 0.002)      // Ending scale value for our model
+  const endScale = new THREE.Vector3(1.000, 1.000, 1.000)      // Ending scale value for our model
   const animationMillis = 750                                  // Animate over 0.75 seconds
 
   const raycaster = new THREE.Raycaster()
   const tapPosition = new THREE.Vector2()
-  const loader = new THREE.VRMLoader()
-  const animationLoader = new THREE.GLTFLoader();
-
-  for(let i = 0; i < modelFiles.length; ++i){
-    loader.load(modelFiles[i], function() { alert('Model ' + i + ' loaded.') });
-  }
-  for(let i = 0; i < animationFiles.length; ++i){
-    animationLoader.load(animationFiles[i], function() { alert('Animation ' + i + ' loaded.') });
-  }
+  const loader = new THREE.GLTFLoader()  // This comes from GLTFLoader.js.
+  const clock = new THREE.Clock();
 
   let surface  // Transparent surface for raycasting for object placement.
+  let mixers = new Array();
+  let loadModelIndex = 0;
+  let loadAnimationIndex = 0;
 
   // Populates some object into an XR scene and sets the initial camera position. The scene and
   // camera come from xr3js, and are only available in the camera loop lifecycle onStart() or later.
@@ -45,92 +40,63 @@ const placegroundScenePipelineModule = () => {
     surface.position.set(0, 0, 0)
     scene.add(surface)
 
-    scene.add(new THREE.AmbientLight( 0x404040, 5 ))  // Add soft white light to the scene.
+    // light
+    const light = new THREE.DirectionalLight( 0xffffff );
+    light.position.set( 1.0, 1.0, 1.0 ).normalize();
+    scene.add( light );
 
     // Set the initial camera position relative to the scene we just laid out. This must be at a
     // height greater than y=0.
     camera.position.set(0, 3, 0)
   }
 
-  const animateIn = (model, pointX, pointZ, yDegrees) => {
+  const animateIn = (gltf, pointX, pointZ, yDegrees) => {
     console.log(`animateIn: ${pointX}, ${pointZ}, ${yDegrees}`)
     const scale = Object.assign({}, startScale)
     loadModelIndex = (loadModelIndex + 1) % modelFiles.length;
 
-    const scale = { x: startScale.x, y: startScale.y, z: startScale.z }
+    // generate VRM instance from gltf
+    THREE.VRM.from( gltf ).then( ( vrm ) => {
+      console.log( vrm );
 
-    model.scene.name = "VRM";
-    //model.scene.rotation.set(0.0, yDegrees, 0.0)
-    model.scene.rotation.set( 0.0, Math.PI, 0.0 )
-    model.scene.position.set( pointX, 0.0, pointZ )
-    model.scene.scale.set( scale.x, scale.y, scale.z )
+      vrm.scene.name = "VRM";
+      vrm.scene.rotation.set(0.0, yDegrees, 0.0)
+      vrm.scene.position.set(pointX, 0.0, pointZ)
+      vrm.scene.scale.set(scale.x, scale.y, scale.z)
+      XR.Threejs.xrScene().scene.add(vrm.scene)
+      vrm.humanoid.getBoneNode( THREE.VRMSchema.HumanoidBoneName.Hips ).rotation.y = Math.PI;
 
-    // VRMLoader doesn't support VRM Unlit extension yet so
-    // converting all materials to MeshBasicMaterial here as workaround so far.
-    model.scene.traverse((object) => {
-     if ( object.material ) {
-        if ( Array.isArray( object.material ) ) {
-          for ( var i = 0, il = object.material.length; i < il; i ++ ) {
-            var material = new THREE.MeshBasicMaterial();
-            THREE.Material.prototype.copy.call( material, object.material[ i ] );
-            material.color.copy( object.material[ i ].color );
-            material.map = object.material[ i ].map;
-            material.lights = false;
-            material.skinning = object.material[ i ].skinning;
-            material.morphTargets = object.material[ i ].morphTargets;
-            material.morphNormals = object.material[ i ].morphNormals;
-            object.material[ i ] = material;
-         }
-        } else {
-          var material = new THREE.MeshBasicMaterial();
-          THREE.Material.prototype.copy.call( material, object.material );
-          material.color.copy( object.material.color );
-          material.map = object.material.map;
-          material.lights = false;
-          material.skinning = object.material.skinning;
-          material.morphTargets = object.material.morphTargets;
-          material.morphNormals = object.material.morphNormals;
-          object.material = material;
+      new TWEEN.Tween(scale)
+        .to(endScale, animationMillis)
+        .easing(TWEEN.Easing.Elastic.Out) // Use an easing function to make the animation smooth.
+        .onUpdate(() => { vrm.scene.scale.set(scale.x, scale.y, scale.z) })
+        .start() // Start the tween immediately.
+
+      //アニメーションの紐付け
+      let mixer = new THREE.AnimationMixer(vrm.scene);
+      loader.load( animationFiles[loadAnimationIndex], function( gltf ){
+        loadAnimationIndex = (loadAnimationIndex + 1) % animationFiles.length;
+
+        const animations = gltf.animations;
+        if( animations && animations.length ){
+          for( let animation of animations ){
+            correctBoneName( animation.tracks );
+            correctCoordinate( animation.tracks );
+            mixer.clipAction( animation ).play();
+          }
         }
-      }
-    });
-
-    //表情のブレンドシェイプ
-    let morphTarget = model.scene.getObjectByName( "Face", true );
-    morphTarget.morphTargetInfluences[1] = 1.0;
-
-    //scene.add(model.scene)
-    XR.Threejs.xrScene().scene.add(model.scene)
-
-    //アニメーションの紐付け
-    let mixer = new THREE.AnimationMixer(model.scene);
-    animationLoader.load( animationFiles[loadAnimationIndex], function( gltf ){
-      loadAnimationIndex = (loadAnimationIndex + 1) % animationFiles.length;
-
-      const animations = gltf.animations;
-      if( animations && animations.length ){
-        for( let animation of animations ){
-          correctBoneName( animation.tracks );
-          correctCoordinate( animation.tracks );
-          mixer.clipAction( animation ).play();
-        }
-      }
-    });
-    mixers.push( mixer );
-
-    new TWEEN.Tween(scale)
-      .to(endScale, animationMillis)
-      .easing(TWEEN.Easing.Elastic.Out) // Use an easing function to make the animation smooth.
-      .onUpdate(() => { model.scene.scale.set(scale.x, scale.y, scale.z) })
-      .start() // Start the tween immediately.
+      });
+      mixers.push( mixer );
+    } );
   }
 
   // Load the glb model at the requested point on the surface.
   const placeObject = (pointX, pointZ) => {
     console.log(`placing at ${pointX}, ${pointZ}`)
+    loader.crossOrigin = 'anonymous';
     loader.load(
-      modelFile,                                                              // resource URL.
-      (vrm) => {animateIn(vrm, pointX, pointZ, Math.random() * 360)},         // loaded handler.
+      modelFiles[loadModelIndex],                                             // resource URL.
+      (gltf) => { animateIn(gltf, pointX, pointZ, Math.random() * 360) },     // loaded handler.
       (xhr) => {console.log(`${(xhr.loaded / xhr.total * 100 )}% loaded`)},   // progress handler.
       (error) => {console.log('An error happened')}                           // error handler.
     )

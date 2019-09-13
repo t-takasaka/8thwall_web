@@ -1,15 +1,15 @@
 <!doctype html>
 <html>
   <head>
-    <meta name="viewport" content="width=device-width, initial-scale=0.75, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>8th Wall Web: three.js</title>
 
     <!-- THREE.js must be supplied -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/99/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.106.2/build/three.js"></script>
 
     <!-- Required to load glTF (.gltf or .glb) models -->
-    <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/loaders/VRMLoader.js"></script>
+    <script src="https://unpkg.com/three@0.106.2/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://pixiv.github.io/three-vrm/lib/three-vrm.js"></script>
 
     <!-- Javascript tweening engine -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/16.3.5/Tween.min.js"></script>
@@ -26,7 +26,6 @@
   </head>
 
   <body>
-    <!-- The AR canvas -->
     <canvas id="camerafeed"></canvas>
   </body>
 </html>
